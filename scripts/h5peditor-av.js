@@ -319,10 +319,16 @@ H5PEditor.widgets.video = H5PEditor.widgets.audio = H5PEditor.AV = (function ($)
     var qualityName = (file.metadata && file.metadata.qualityName) ? file.metadata.qualityName : defaultQualityName;
 
     // Check if source is provider (Vimeo, YouTube, Panopto)
-    const isProvider = file.path && C.findProvider(file.path);
+    const isProvider = file.path && C.findProvider(file.path) || false;
+
+    // Check if source is YouTube
+    var youtubeRegex = C.providers.filter(function (provider) {
+      return provider.name === 'YouTube';
+    })[0].regexp;
+    var isYoutube = file.path && youtubeRegex.test(file.path);
 
     // Only allow single source if YouTube
-    if (isProvider) {
+    if (isProvider && !isYoutube) {
       // Remove all other files except this one
       that.$files.children().each(function (i) {
         if (i !== that.updateIndex) {
@@ -336,7 +342,7 @@ H5PEditor.widgets.video = H5PEditor.widgets.audio = H5PEditor.AV = (function ($)
       // This is now the first and only file
       index = 0;
     }
-    this.$add.toggleClass('hidden', isProvider);
+    this.$add.toggleClass('hidden', isProvider && !isYoutube);
 
     // If updating remove and recreate element
     if (that.updateIndex !== undefined) {
@@ -345,8 +351,19 @@ H5PEditor.widgets.video = H5PEditor.widgets.audio = H5PEditor.AV = (function ($)
       this.updateIndex = undefined;
     }
 
-    // Create file with customizable quality if enabled and not youtube
-    if (this.field.enableCustomQualityLabel === true && !isProvider) {
+    var isSignLanguage = (file.metadata && file.metadata.isSignLanguage) || false;
+    var signLanguageChecked = isSignLanguage ? ' checked="checked"' : '';
+
+    // Create file with customizable quality if enabled and supported
+    if (this.field.enableCustomQualityLabel === true && (!isProvider || isYoutube)) {
+      var signLanguageHTML = '<div class="field field-name-sign-language boolean">' +
+        '<label class="h5peditor-label">' +
+          '<input id="field-sign-language-' + rowInputId + '" class="h5peditor-sign-language" type="checkbox" aria-describedby="field-sign-language-' + rowInputId + '-description" + ' + signLanguageChecked + '>' +
+            H5PEditor.t('core', 'usedForSignLanguage') +
+        '</label>' +
+        '<div class="h5peditor-field-description" id="field-sign-language-' + rowInputId + '-description">' + H5PEditor.t('core', 'usedForSignLanguageDescription') + '</div>' +
+        '</div>'
+
       fileHtml = '<li class="h5p-av-row">' +
         '<div class="h5p-thumbnail">' +
           '<div class="h5p-type" title="' + file.mime + '">' + file.mime.split('/')[1] + '</div>' +
@@ -357,6 +374,7 @@ H5PEditor.widgets.video = H5PEditor.widgets.audio = H5PEditor.AV = (function ($)
           '<div class="h5p-video-quality-title">' + H5PEditor.t('core', 'videoQuality') + '</div>' +
           '<label class="h5peditor-field-description" for="' + rowInputId + '">' + H5PEditor.t('core', 'videoQualityDescription') + '</label>' +
           '<input id="' + rowInputId + '" class="h5peditor-text" type="text" maxlength="60" value="' + qualityName + '">' +
+          signLanguageHTML +
         '</div>' +
       '</li>';
     }
@@ -402,11 +420,20 @@ H5PEditor.widgets.video = H5PEditor.widgets.audio = H5PEditor.AV = (function ($)
         return false;
       });
 
-    // on input update
+    // on quality name update
     $file
-      .find('input')
+      .find('input.h5peditor-text')
       .change(function () {
-        file.metadata = { qualityName: $(this).val() };
+        file.metadata = file.metadata || {};
+        file.metadata.qualityName = $(this).val();
+      });
+
+    // on sign language update
+    $file
+      .find('input.h5peditor-sign-language')
+      .change(function () {
+        file.metadata = file.metadata || {};
+        file.metadata.isSignLanguage = $(this).is(':checked');
       });
 
     // Create remove file dialog

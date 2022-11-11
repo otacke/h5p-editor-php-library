@@ -68,7 +68,7 @@ ns.renderableCommonFields = {};
   ns.loadJs = (src, done) => {
     if (H5P.jsLoaded(src)) {
       // Already loaded
-      done(); 
+      done();
       return;
     }
 
@@ -92,7 +92,7 @@ ns.renderableCommonFields = {};
     };
     script.onerror = function (err) {
       loading[src].forEach(cb => cb(err));
-      delete loading[src];      
+      delete loading[src];
     };
     script.src = src;
     document.head.appendChild(script);
